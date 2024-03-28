@@ -1,45 +1,21 @@
 #!/usr/bin/python3
-""" This module defines a base class for all models in our hbnb clone """
-from sqlalchemy import Column, DateTime, String
-from sqlalchemy.ext.declarative import declarative_base
-from sqlalchemy.orm import relationship
+"""This module defines a base class for all models in our hbnb clone"""
 import uuid
-from datetime import datetime
-import os
-import models
+from datetime import date, datetime
+from sqlalchemy.ext.declarative import declarative_base
+from sqlalchemy.sql.expression import null
+from sqlalchemy import Column, String, DateTime
+
 
 Base = declarative_base()
 
 
 class BaseModel:
-    """
-        A base class for all hbnb models
-        ATTRIBUTS:
-        ============
-            id : string 60char max, not null, unique
-                Primary Key
-            created_at : datetime, not null,
-                default: datetime now
-            updated_at : datetime, not null,
-                default: datetime now
-    """
-    id = Column(
-        String(60),
-        nullable=False,
-        primary_key=True
-    )
-    created_at = Column(
-        DateTime,
-        nullable=False,
-        default=datetime.utcnow()
-    )
-    updated_at = Column(
-        DateTime,
-        nullable=False,
-        default=datetime.utcnow()
-    )
+    """A base class for all hbnb models"""
 
-    """ A base class for all hbnb models """
+    id = Column(String(60), nullable=False, primary_key=True)
+    created_at = Column(DateTime, nullable=False, default=datetime.utcnow())
+    updated_at = Column(DateTime, nullable=False, default=datetime.utcnow())
 
     def __init__(self, *args, **kwargs):
         """Instatntiates a new model"""
@@ -49,25 +25,16 @@ class BaseModel:
             self.created_at = datetime.now()
             self.updated_at = datetime.now()
         else:
-            # print(kwargs)
             for key, value in kwargs.items():
-                if key == '__class__':
-                    continue
-                setattr(self, key, value)
-            try:
-                kwargs['updated_at'] = datetime.\
-                    strptime(kwargs['updated_at'],
-                             '%Y-%m-%dT%H:%M:%S.%f')
-                kwargs['created_at'] = datetime.\
-                    strptime(kwargs['created_at'],
-                             '%Y-%m-%dT%H:%M:%S.%f')
-                del kwargs['__class__']
-            except KeyError:
-                self.id = str(uuid.uuid4())
-                self.created_at = datetime.now()
-                self.updated_at = datetime.now()
+                if key == "created_at" or key == "updated_at":
+                    setattr(self, key, datetime.fromisoformat(value))
+                elif key != "__class__":
+                    setattr(self, key, value)
 
-            self.__dict__.update(kwargs)
+            if not kwargs.get('id'):
+                setattr(self, 'id', str(uuid.uuid4()))
+                setattr(self, 'created_at', datetime.now())
+                setattr(self, 'updated_at', datetime.now())
 
     def __str__(self):
         """Returns a string representation of the instance"""
@@ -90,14 +57,13 @@ class BaseModel:
         dictionary['created_at'] = self.created_at.isoformat()
         dictionary['updated_at'] = self.updated_at.isoformat()
 
-        try:
-            del dictionary["_sa_instance_state"]
-        except Exception:
-            return dictionary
+        if '_sa_instance_state' in dictionary:
+            del dictionary['_sa_instance_state']
 
         return dictionary
 
     def delete(self):
-        """Module is doc"""
+        """Deletes the current instance from the storage (models.storage) by
+        calling the method delete."""
         from models import storage
         storage.delete(self)

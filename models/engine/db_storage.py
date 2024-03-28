@@ -1,90 +1,94 @@
 #!/usr/bin/python3
-import sqlalchemy
-from sqlalchemy import inspect
-from models.city import City
-from models.state import State
-from models.user import User
-from models.place import Place
-from models.amenity import Amenity
-from models.review import Review
-from models.base_model import BaseModel, Base
-from sqlalchemy import create_engine
-from sqlalchemy.orm import sessionmaker, scoped_session
-import os
-""" DOC """
+""" New Engine DBStorage """
+from sqlalchemy import (create_engine)
+from os import getenv
+from sqlalchemy.orm.scoping import scoped_session
+from sqlalchemy.schema import MetaData
+from sqlalchemy.orm import sessionmaker
+
+
+username = getenv('HBNB_MYSQL_USER')
+password = getenv('HBNB_MYSQL_PWD')
+db = getenv('HBNB_MYSQL_DB')
+host = getenv('HBNB_MYSQL_HOST')
+v_env = getenv('HBNB_ENV')
+
+URI = f"mysql+mysqldb://{username}:{password}@{host}/{db}"
 
 
 class DBStorage:
-    """ DOC """
+    """ New Engine DBStorage """
     __engine = None
     __session = None
 
     def __init__(self):
-        """ DOC """
-        user = os.environ.get("HBNB_MYSQL_USER")
-        password = os.environ.get("HBNB_MYSQL_PWD")
-        host = os.environ.get("HBNB_MYSQL_HOST")
-        database = os.environ.get("HBNB_MYSQL_DB")
-        env = os.environ.get("HBNB_ENV")
-        self.__engine = create_engine("mysql+mysqldb://{}:{}@{}:3306/{}".
-                                      format(user, password, host, database),
-                                      pool_pre_ping=True)
+        self.__engine = create_engine(URI, pool_pre_ping=True)
 
-        Session = sessionmaker(bind=self.__engine)
-        Session.configure(bind=self.__engine)
-        self.__session = Session()
-
-        if env == "test":
-            Base.metadata.drop_all(self.__engine)
-        Base.metadata.create_all(self.__engine)
+        if v_env == 'test':
+            metadata = MetaData(self.__engine)
+            metadata.reflect()
+            metadata.drop_all()
 
     def all(self, cls=None):
-        """ query on the current database session """
-        dic = {}
-        if os.getenv("HBNB_ENV") == "test":
-            q = self.__session.query(State).all()
+        """ Return all objects of specific cls or all cls """
+        from models.base_model import BaseModel, Base
+        from models.amenity import Amenity
+        from models.city import City
+        from models.place import Place
+        from models.review import Review
+        from models.state import State
+        from models.user import User
+        classDict = {"City": City, "State": State,
+                     "User": User, "Place": Place,
+                     "Review": Review, "Amenity": Amenity}
+        objects = {}
+        if cls is None:
+            for className in classDict:
+                data = self.__session.query(classDict[className]).all()
+                for obj in data:
+                    objects[f"{obj.__class__.__name__}.{obj.id}"] = obj
+
         else:
-            if cls is None:
-                q = self.__session.query(State, City, Place,
-                                         Review, User, Amenity).all()
-            else:
-                q = self.__session.query(cls).all()
-
-        for obj in q:
-            # delattr(obj,"_sa_instance_state") sert à rien
-            dic[f"{obj.__class__.__name__}.{obj.id}"] = obj
-
-        return dic
+            if isinstance(cls, str):
+                cls = classDict[cls]
+            data = self.__session.query(cls).all()
+            for obj in data:
+                objects[f"{obj.id}"] = obj
+        return objects
 
     def new(self, obj):
-        """ add the object to the current database session """
-        # print(f"{obj} created")
+        """ Adds the object to the current
+        database session (self.__session) """
         self.__session.add(obj)
 
     def save(self):
-        """ commit all changes of the current database session """
+        """ Commits all changes of the current database session """
         self.__session.commit()
-        # print("Saved")
 
     def delete(self, obj=None):
-        """ delete from the current database session obj if not None """
-        if obj is None:
-            return
-        else:
+        """Deletes from the current database session obj if not None"""
+        if obj:
             self.__session.delete(obj)
 
     def reload(self):
-        """ create all tables in the database (feature of SQLAlchemy) """
-        from sqlalchemy.ext.declarative import declarative_base
+        """ Reload data from the database """
+        from models.base_model import BaseModel, Base
+        from models.amenity import Amenity
+        from models.city import City
+        from models.place import Place
+        from models.review import Review
+        from models.state import State
+        from models.user import User
 
-        Base = declarative_base()
-        s = sessionmaker(bind=self.__engine, expire_on_commit=False)
-        self.__session = scoped_session(s)
         Base.metadata.create_all(self.__engine)
 
+        session_factory = sessionmaker(
+            bind=self.__engine, expire_on_commit=False)
+        Session = scoped_session(session_factory)
+        self.__session = Session()
+
     def close(self):
-        """ doc """
-        if self.__session:
-            self.__session.remove()
-        else:
-            Session.close()
+        """
+        Call remove() method on the private session attribute
+        """
+        self.__session.remove()
