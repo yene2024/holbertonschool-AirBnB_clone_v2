@@ -1,73 +1,97 @@
 #!/usr/bin/python3
-from sqlalchemy import create_engine
-from sqlalchemy.orm import sessionmaker, scoped_session
-from sqlalchemy.orm import relationship, backref
-from models.base_model import Base
-from models.state import State
-from models.city import City
+""" New Engine DBStorage """
+from sqlalchemy import (create_engine)
 from os import getenv
+from sqlalchemy.orm.scoping import scoped_session
+from sqlalchemy.schema import MetaData
+from sqlalchemy.orm import sessionmaker
+
+
+username = getenv('HBNB_MYSQL_USER')
+password = getenv('HBNB_MYSQL_PWD')
+db = getenv('HBNB_MYSQL_DB')
+host = getenv('HBNB_MYSQL_HOST')
+v_env = getenv('HBNB_ENV')
+
+URI = f"mysql+mysqldb://{username}:{password}@{host}/{db}"
 
 
 class DBStorage:
-    """Class for DB Storage"""
+    """ New Engine DBStorage """
     __engine = None
     __session = None
 
     def __init__(self):
-        """Constructor"""
-        self.__engine = create_engine("mysql+pymysql://{}:{}@{}/{}".
-                                      format(getenv("HBNB_MYSQL_USER"),
-                                             getenv("HBNB_MYSQL_PWD"),
-                                             getenv("HBNB_MYSQL_HOST"),
-                                             getenv("HBNB_MYSQL_DB")),
-                                      pool_pre_ping=True)
-        if getenv("HBNB_ENV") == "test":
-            Base.metadata.drop_all(self.__engine)
+        self.__engine = create_engine(URI, pool_pre_ping=True)
+
+        if v_env == 'test':
+            metadata = MetaData(self.__engine)
+            metadata.reflect()
+            metadata.drop_all()
 
     def all(self, cls=None):
-        """Query all objects"""
+        """ Return all objects of specific cls or all cls """
+        from models.base_model import BaseModel, Base
+        from models.amenity import Amenity
+        from models.city import City
+        from models.place import Place
+        from models.review import Review
+        from models.state import State
+        from models.user import User
+        classDict = {"City": City, "State": State,
+                     "User": User, "Place": Place,
+                     "Review": Review, "Amenity": Amenity}
+        objects = {}
         if cls is None:
-            objs = self.__session.query(State).all()
-            objs.extend(self.__session.query(City).all())
-            objs.extend(self.__session.query(User).all())
-            objs.extend(self.__session.query(Place).all())
-            objs.extend(self.__session.query(Review).all())
-            objs.extend(self.__session.query(Amenity).all())
+            for className in classDict:
+                data = self.__session.query(classDict[className]).all()
+                for obj in data:
+                    objects[f"{obj.__class__.__name__}.{obj.id}"] = obj
+
         else:
-            if type(cls) is str:
-                cls = eval(cls)
-            objs = self.__session.query(cls)
-        return {"{}.{}".format(type(o).__name__, o.id): o for o in objs}
+            if isinstance(cls, str):
+                cls = classDict[cls]
+            data = self.__session.query(cls).all()
+            for obj in data:
+                objects[f"{obj.id}"] = obj
+        return objects
 
     def new(self, obj):
-        """Add the object to the current database session"""
-        if obj:
-            self.__session.add(obj)
+        """ Adds the object to the current
+        database session (self.__session) """
+        self.__session.add(obj)
 
     def save(self):
-        """Commit all changes of the current database session"""
+        """ Commits all changes of the current database session """
         self.__session.commit()
 
     def delete(self, obj=None):
-        """Delete from the current database session obj if not None"""
+        """Deletes from the current database session obj if not None"""
         if obj:
             self.__session.delete(obj)
 
     def reload(self):
-        """Reload objects from the database"""
+        """ Reload data from the database """
+        from models.base_model import BaseModel, Base
+        from models.amenity import Amenity
+        from models.city import City
+        from models.place import Place
+        from models.review import Review
+        from models.state import State
+        from models.user import User
+
         Base.metadata.create_all(self.__engine)
         session_factory = sessionmaker(bind=self.__engine, expire_on_commit=False)
         Session = scoped_session(session_factory)
         self.__session = Session()
 
+        session_factory = sessionmaker(
+            bind=self.__engine, expire_on_commit=False)
+        Session = scoped_session(session_factory)
+        self.__session = Session()
+
     def close(self):
-        """Call remove() method on the private session attribute"""
+        """
+        Call remove() method on the private session attribute
+        """
         self.__session.remove()
-
-    """def get_cities(self, state_id):
-        ""Get cities by state_id""
-        state = self.__session.query(State).filter(State.id == state_id).first()
-        if state:
-            return state.cities
-        return []"""
-

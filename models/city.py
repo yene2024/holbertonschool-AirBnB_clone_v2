@@ -1,31 +1,9 @@
 #!/usr/bin/python3
-""" module for class State """
-import models
-import os
-from sqlalchemy import Column, String, ForeignKey
-from models.base_model import BaseModel, Base
-from sqlalchemy.orm import relationship
+""" City Module for HBNB project """
+from models.base_model import BaseModel
 
 
-class City(BaseModel, Base):
-    """ class for City
-
-        Attributs
-        ===================
-
-            name : name of City
-                String, not null
-            state_id: ForeignKey (class State), not null string
-            place: relationship with class Place
-    """
-    __tablename__ = "cities"
-
-    name = Column(
-        String(128),
-        nullable=False)
-    state_id = Column(
-        String(60),
-        ForeignKey('states.id'),
-        nullable=False)
-    places = relationship(
-        "Place", backref="cities")
+class City(BaseModel):
+    """ The city class, contains state ID and name """
+    state_id = ""
+    name = ""
