@@ -54,5 +54,5 @@ class FileStorage:
         if obj == None:
             pass
         elif obj in __objects:
-            del __objects[obj]   
-                 
+            del __objects[obj]
+       
