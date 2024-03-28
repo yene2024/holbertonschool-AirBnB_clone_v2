@@ -1,73 +1,90 @@
 #!/usr/bin/python3
+import sqlalchemy
+from sqlalchemy import inspect
+from models.city import City
+from models.state import State
+from models.user import User
+from models.place import Place
+from models.amenity import Amenity
+from models.review import Review
+from models.base_model import BaseModel, Base
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker, scoped_session
-from sqlalchemy.orm import relationship, backref
-from models.base_model import Base
-from models.state import State
-from models.city import City
-from os import getenv
+import os
+""" DOC """
 
 
 class DBStorage:
-    """Class for DB Storage"""
+    """ DOC """
     __engine = None
     __session = None
 
     def __init__(self):
-        """Constructor"""
-        self.__engine = create_engine("mysql+pymysql://{}:{}@{}/{}".
-                                      format(getenv("HBNB_MYSQL_USER"),
-                                             getenv("HBNB_MYSQL_PWD"),
-                                             getenv("HBNB_MYSQL_HOST"),
-                                             getenv("HBNB_MYSQL_DB")),
+        """ DOC """
+        user = os.environ.get("HBNB_MYSQL_USER")
+        password = os.environ.get("HBNB_MYSQL_PWD")
+        host = os.environ.get("HBNB_MYSQL_HOST")
+        database = os.environ.get("HBNB_MYSQL_DB")
+        env = os.environ.get("HBNB_ENV")
+        self.__engine = create_engine("mysql+mysqldb://{}:{}@{}:3306/{}".
+                                      format(user, password, host, database),
                                       pool_pre_ping=True)
-        if getenv("HBNB_ENV") == "test":
+
+        Session = sessionmaker(bind=self.__engine)
+        Session.configure(bind=self.__engine)
+        self.__session = Session()
+
+        if env == "test":
             Base.metadata.drop_all(self.__engine)
+        Base.metadata.create_all(self.__engine)
 
     def all(self, cls=None):
-        """Query all objects"""
-        if cls is None:
-            objs = self.__session.query(State).all()
-            objs.extend(self.__session.query(City).all())
-            objs.extend(self.__session.query(User).all())
-            objs.extend(self.__session.query(Place).all())
-            objs.extend(self.__session.query(Review).all())
-            objs.extend(self.__session.query(Amenity).all())
+        """ query on the current database session """
+        dic = {}
+        if os.getenv("HBNB_ENV") == "test":
+            q = self.__session.query(State).all()
         else:
-            if type(cls) is str:
-                cls = eval(cls)
-            objs = self.__session.query(cls)
-        return {"{}.{}".format(type(o).__name__, o.id): o for o in objs}
+            if cls is None:
+                q = self.__session.query(State, City, Place,
+                                         Review, User, Amenity).all()
+            else:
+                q = self.__session.query(cls).all()
+
+        for obj in q:
+            # delattr(obj,"_sa_instance_state") sert à rien
+            dic[f"{obj.__class__.__name__}.{obj.id}"] = obj
+
+        return dic
 
     def new(self, obj):
-        """Add the object to the current database session"""
-        if obj:
-            self.__session.add(obj)
+        """ add the object to the current database session """
+        # print(f"{obj} created")
+        self.__session.add(obj)
 
     def save(self):
-        """Commit all changes of the current database session"""
+        """ commit all changes of the current database session """
         self.__session.commit()
+        # print("Saved")
 
     def delete(self, obj=None):
-        """Delete from the current database session obj if not None"""
-        if obj:
+        """ delete from the current database session obj if not None """
+        if obj is None:
+            return
+        else:
             self.__session.delete(obj)
 
     def reload(self):
-        """Reload objects from the database"""
+        """ create all tables in the database (feature of SQLAlchemy) """
+        from sqlalchemy.ext.declarative import declarative_base
+
+        Base = declarative_base()
+        s = sessionmaker(bind=self.__engine, expire_on_commit=False)
+        self.__session = scoped_session(s)
         Base.metadata.create_all(self.__engine)
-        session_factory = sessionmaker(bind=self.__engine, expire_on_commit=False)
-        Session = scoped_session(session_factory)
-        self.__session = Session()
 
     def close(self):
-        """Call remove() method on the private session attribute"""
-        self.__session.remove()
-
-    """def get_cities(self, state_id):
-        ""Get cities by state_id""
-        state = self.__session.query(State).filter(State.id == state_id).first()
-        if state:
-            return state.cities
-        return []"""
-
+        """ doc """
+        if self.__session:
+            self.__session.remove()
+        else:
+            Session.close()
