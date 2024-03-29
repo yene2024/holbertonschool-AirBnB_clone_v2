@@ -10,10 +10,6 @@ from models.state import State
 from models.city import City
 from models.amenity import Amenity
 from models.review import Review
-import re
-import os
-import uuid
-from datetime import datetime
 
 
 class HBNBCommand(cmd.Cmd):
@@ -23,12 +19,16 @@ class HBNBCommand(cmd.Cmd):
     prompt = '(hbnb) ' if sys.__stdin__.isatty() else ''
 
     classes = {
-               'BaseModel': BaseModel, 'User': User, 'Place': Place,
-               'State': State, 'City': City, 'Amenity': Amenity,
-               'Review': Review
-              }
-
+        'BaseModel': BaseModel, 'User': User, 'Place': Place,
+        'State': State, 'City': City, 'Amenity': Amenity,
+        'Review': Review
+    }
     dot_cmds = ['all', 'count', 'show', 'destroy', 'update']
+    types = {
+        'number_rooms': int, 'number_bathrooms': int,
+        'max_guest': int, 'price_by_night': int,
+        'latitude': float, 'longitude': float
+    }
 
     def preloop(self):
         """Prints if isatty is false"""
@@ -81,7 +81,7 @@ class HBNBCommand(cmd.Cmd):
                         # _args = _args.replace('\"', '')
             line = ' '.join([_cmd, _cls, _id, _args])
 
-        except Exception:
+        except Exception as mess:
             pass
         finally:
             return line
@@ -115,25 +115,37 @@ class HBNBCommand(cmd.Cmd):
 
     def do_create(self, args):
         """ Create an object of any class"""
-        if not args:
+        arg = args.split()
+        if not arg:
             print("** class name missing **")
             return
-
-        class_name, _, arg_str = args.partition(' ')
-
-        if class_name not in self.classes:
+        elif arg[0] not in HBNBCommand.classes:
             print("** class doesn't exist **")
             return
-
-        try:
-            obj_dict = eval("{" + arg_str + "}")
-        except Exception as e:
-            print("** invalid syntax: {}".format(e))
-            return
-
-        new_obj = self.classes[class_name](**obj_dict)
-        new_obj.save()
-        print(new_obj.id)
+        new_instance = HBNBCommand.classes[arg[0]]()
+        for param in arg[1:]:
+            parts = param.split('=')
+            if len(parts) != 2:
+                continue
+            key, value = parts
+            if not hasattr(new_instance, key):
+                continue
+            value = value.replace('_', ' ')
+            if value[0] == '"' and value[-1] == '"':
+                value = value[1:-1].replace('\\"', '"')
+            elif '.' in value:
+                try:
+                    value = float(value)
+                except ValueError:
+                    continue
+            else:
+                try:
+                    value = int(value)
+                except ValueError:
+                    continue
+            setattr(new_instance, key, value)
+        new_instance.save()
+        print(new_instance.id)
 
     def help_create(self):
         """ Help information for the create method """
@@ -141,26 +153,30 @@ class HBNBCommand(cmd.Cmd):
         print("[Usage]: create <className>\n")
 
     def do_show(self, args):
-        """ Shows an individual instance of a class """
-        class_name, _, obj_id = args.partition(' ')
+        """ Method to show an individual object """
+        new = args.partition(" ")
+        c_name = new[0]
+        c_id = new[2]
 
-        if not class_name:
+        # guard against trailing args
+        if c_id and ' ' in c_id:
+            c_id = c_id.partition(' ')[0]
+
+        if not c_name:
             print("** class name missing **")
             return
 
-        if class_name not in self.classes:
+        if c_name not in HBNBCommand.classes:
             print("** class doesn't exist **")
             return
 
-        if not obj_id:
+        if not c_id:
             print("** instance id missing **")
             return
 
-        key = class_name + "." + obj_id
-
+        key = c_name + "." + c_id
         try:
-            obj = storage.all()[key]
-            print(obj)
+            print(storage._FileStorage__objects[key])
         except KeyError:
             print("** no instance found **")
 
@@ -171,24 +187,28 @@ class HBNBCommand(cmd.Cmd):
 
     def do_destroy(self, args):
         """ Destroys a specified object """
-        class_name, _, obj_id = args.partition(' ')
+        new = args.partition(" ")
+        c_name = new[0]
+        c_id = new[2]
+        if c_id and ' ' in c_id:
+            c_id = c_id.partition(' ')[0]
 
-        if not class_name:
+        if not c_name:
             print("** class name missing **")
             return
 
-        if class_name not in self.classes:
+        if c_name not in HBNBCommand.classes:
             print("** class doesn't exist **")
             return
 
-        if not obj_id:
+        if not c_id:
             print("** instance id missing **")
             return
 
-        key = class_name + "." + obj_id
+        key = c_name + "." + c_id
 
         try:
-            del storage.all()[key]
+            del (storage.all()[key])
             storage.save()
         except KeyError:
             print("** no instance found **")
@@ -198,19 +218,39 @@ class HBNBCommand(cmd.Cmd):
         print("Destroys an individual instance of a class")
         print("[Usage]: destroy <className> <objectId>\n")
 
+    # def do_all(self, args):
+    #     """ Shows all objects, or all objects of a class"""
+    #     print_list = []
+
+    #     if args:
+    #         args = args.split(' ')[0]  # remove possible trailing args
+    #         if args not in HBNBCommand.classes:
+    #             print("** class doesn't exist **")
+    #             return
+    #         for k, v in storage._FileStorage__objects.items():
+    #             if k.split('.')[0] == args:
+    #                 print_list.append(str(v))
+    #     else:
+    #         for k, v in storage._FileStorage__objects.items():
+    #             print_list.append(str(v))
+
+        # print(print_list)
     def do_all(self, args):
         """ Shows all objects, or all objects of a class"""
         print_list = []
 
         if args:
-            class_name = args.split(' ')[0]  # remove possible trailing args
-            if class_name not in self.classes:
+            args = args.split(' ')[0]  # remove possible trailing args
+            if args not in HBNBCommand.classes:
                 print("** class doesn't exist **")
                 return
-            print_list = [str(obj) for obj in storage.all(args).values() if type(obj).__name__ == class_name]
+            cls = HBNBCommand.classes[args]
+            for v in storage.all(cls).values():
+                print_list.append(str(v))
         else:
-            print_list = [str(obj) for obj in storage.all().values()]
-        
+            for v in storage.all().values():
+                print_list.append(str(v))
+
         print(print_list)
 
     def help_all(self):
@@ -221,7 +261,7 @@ class HBNBCommand(cmd.Cmd):
     def do_count(self, args):
         """Count current number of class instances"""
         count = 0
-        for k, v in storage.all().items():
+        for k, v in storage._FileStorage__objects.items():
             if args == k.split('.')[0]:
                 count += 1
         print(count)
