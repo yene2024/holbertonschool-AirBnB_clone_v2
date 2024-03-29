@@ -1,5 +1,6 @@
+#!/usr/bin/python3
 from models.base_model import BaseModel, Base
-from sqlalchemy.orm import relationship
+from sqlalchemy.orm import relationship, Column, String, ForeignKey
 from sqlalchemy.ext.declarative import declarative_base
 Base = declarative_base()
 
