@@ -15,4 +15,4 @@ class City(BaseModel, Base):
         nullable=False)
     places = relationship(
         "Place", backref="cities",
-        cascade="delete")
+        cascade="all, delete-orphan")
