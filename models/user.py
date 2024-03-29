@@ -3,6 +3,11 @@
 from models.base_model import BaseModel, Base
 from sqlalchemy import Column, String
 from sqlalchemy.orm import relationship
+from models.base_model import BaseModel
+from models.base_model import Base
+from sqlalchemy import Column
+from sqlalchemy import String
+from sqlalchemy.orm import relationship
 
 
 class User(BaseModel, Base):
@@ -14,3 +19,4 @@ class User(BaseModel, Base):
     first_name = Column(String(128), nullable=True)
     last_name = Column(String(128), nullable=True)
     reviews = relationship("Review", backref="user", cascade="all, delete")
+    places = relationship("Place", backref="user", cascade="delete")
