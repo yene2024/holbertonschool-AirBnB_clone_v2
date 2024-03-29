@@ -2,9 +2,19 @@
 """ Place Module for HBNB project """
 from models.base_model import BaseModel
 from models.base_model import Base
-from sqlalchemy import Column, String, Integer, Float, ForeignKey
+from sqlalchemy import Column, String, Integer, Float, ForeignKey, Table
 from sqlalchemy.ext.declarative import declarative_base
+
 Base = declarative_base()
+
+"""place_amenity table"""
+place_amenity = Table('place_amenity', Base.metadata,
+                      Column('place_id', String(60), ForeignKey('places.id'),
+                             primary_key=True, nullable=False),
+                      Column('amenity_id', String(60),
+                             ForeignKey('amenity_ids'),
+                             primary_key=True, nullable=False))
+
 
 class Place(BaseModel, Base):
     """ A place to stay """
@@ -25,10 +35,22 @@ class Place(BaseModel, Base):
 
     reviews = relationship("Review", backref="place", cascade="all, delete")
 
-    @property
-    def review(self):
-        """Return a list of reviews"""
-        list_reviews = storage.all(Review)
-        place_reviews = [review for review in list_reviews.values()
-                         if review.place_id == self.id]
-        return place_reviews
+
+place_amenities = relationship('Place', secondary=amenity_place_association,
+                               back_populates='amenity')
+
+if getenv("HBNB_TYPE_STORAGE") == "db":
+    amenities = relationship("Amenity", secondary=place_amenity,
+                             viewonly=False)
+    else:
+        @property
+        def amenities(self):
+            """Returns the list of Amenity instances based on amenity_ids"""
+            from models import storage
+            return [storage.all(Amenity).get(id) for id in self.amenity_ids]
+
+        @amenities.setter
+        def amenities(self, obj):
+            """Handles append method for adding an Amenity.id to amenity_ids"""
+            if isinstance(obj, Amenity):
+                self.amenity_ids.append(obj.id)

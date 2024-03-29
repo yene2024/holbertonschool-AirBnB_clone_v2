@@ -10,4 +10,5 @@ class Amenity(BaseModel, Base):
     """This represents amenities"""
     __tablename__ = "amenities"
     name = Column(String(128), nullable=False)
-    place_amenities
+    place_amenities = relationship('Amenity', secondary=amenity_place_association,
+                                   back_populates='place')
