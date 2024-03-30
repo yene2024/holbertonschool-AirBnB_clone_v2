@@ -4,8 +4,7 @@
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker, scoped_session
 from os import getenv
-from models.base_model import Base
-from models.base_model import BaseModel
+from base import Base
 from models.user import User
 from models.state import State
 from models.city import City
@@ -15,7 +14,6 @@ from models.amenity import Amenity
 
 classes = {"State": State, "City": City, "User": User,
            "Place": Place, "Review": Review, "Amenity": Amenity}
-
 
 class DBStorage:
     """DBStorage class"""

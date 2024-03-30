@@ -2,7 +2,8 @@
 """ Place Module for HBNB project """
 import models
 from models.review import Review
-from models.base_model import BaseModel, Base
+from models.base_model import BaseModel
+from models.base import Base 
 from sqlalchemy import Table, Column, String, Integer, Float, ForeignKey
 from sqlalchemy.orm import relationship
 from os import getenv
@@ -63,4 +64,3 @@ class Place(BaseModel, Base):
             to the attribute amenity_ids"""
             if type(value).__name__ == "Amenity":
                 self.amenity_ids.append(value.id)
-

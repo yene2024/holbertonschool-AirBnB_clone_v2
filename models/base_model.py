@@ -2,17 +2,17 @@
 import uuid
 from datetime import datetime
 from sqlalchemy import Column, String, DateTime
-from models.engine.file_storage import FileStorage 
+
+# Import the models module if it's used within this file
 import models
 
 class BaseModel:
     """Base class for all hbnb models"""
 
-    if isinstance(models.storage, FileStorage):
-        #Define columns if storage is FileStorage
-        id = Column(String(60), primary_key=True, nullable=False)
-        created_at = Column(DateTime, default=datetime.utcnow())
-        updated_at = Column(DateTime, default=datetime.utcnow())
+    id = Column(String(60), primary_key=True, nullable=False)
+    created_at = Column(DateTime, default=datetime.utcnow())
+    updated_at = Column(DateTime, default=datetime.utcnow())
+
     def __init__(self, *args, **kwargs):
         """Instantiates a new model"""
         if not kwargs:
@@ -42,6 +42,7 @@ class BaseModel:
     def save(self):
         """Updates updated_at with current time when instance is changed"""
         self.updated_at = datetime.now()
+        # Ensure that models is imported and used correctly
         models.storage.new(self)
         models.storage.save()
 
@@ -57,3 +58,4 @@ class BaseModel:
     def delete(self):
         """delete the current instance from the storage"""
         models.storage.delete(self)
+        

@@ -1,6 +1,7 @@
 #!/usr/bin/python3
 """ State Module for HBNB project """
-from models.base_model import BaseModel, Base
+from models.base_model import BaseModel
+from models.base import Base
 from sqlalchemy.orm import Session
 from sqlalchemy.orm import relationship
 from sqlalchemy import Column, String
@@ -40,4 +41,3 @@ class State(BaseModel, Base):
         def close(self):
             """Close session"""
             Session.close()
-
