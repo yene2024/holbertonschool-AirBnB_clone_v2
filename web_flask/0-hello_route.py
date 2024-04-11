@@ -1,5 +1,5 @@
 #!/usr/bin/python3
-""" This module starts a Flask web application """""
+""" This module starts a Flask web application """
 from flask import Flask
 """Flask class and render_template method"""
 app = Flask(__name__)
