@@ -1,13 +1,14 @@
-#!/user/bin/python3
+from sqlalchemy.ext.declarative import declarative_base
+from sqlalchemy import Column, String, DateTime
 import uuid
 from datetime import datetime
-from sqlalchemy import Column, String, DateTime
 
-# Import the models module if it's used within this file
-import models
+Base = declarative_base()
 
-class BaseModel:
+class BaseModel(Base):
     """Base class for all hbnb models"""
+
+    __abstract__ = True
 
     id = Column(String(60), primary_key=True, nullable=False)
     created_at = Column(DateTime, default=datetime.utcnow())
@@ -58,4 +59,3 @@ class BaseModel:
     def delete(self):
         """delete the current instance from the storage"""
         models.storage.delete(self)
-        

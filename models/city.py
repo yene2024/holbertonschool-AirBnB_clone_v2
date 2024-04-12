@@ -1,10 +1,9 @@
 #!/user/bin/python3
 from models.base_model import BaseModel
-from models.base import Base
 from sqlalchemy import Column, String, ForeignKey
 
 
-class City(BaseModel, Base):
+class City(BaseModel):
     """ The city class, contains state ID and name """
     __tablename__ = 'cities'
 
