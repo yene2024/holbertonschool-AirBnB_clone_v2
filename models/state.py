@@ -1,37 +1,42 @@
 #!/usr/bin/python3
-"""This is the state class"""
+""" State Module for HBNB project """
 from models.base_model import BaseModel, Base
-from sqlalchemy import Column, String
+from sqlalchemy.orm import Session
 from sqlalchemy.orm import relationship
-from os import environ
+from sqlalchemy import Column, String
+from os import getenv
+import models
+from models.city import City
 
 
 class State(BaseModel, Base):
-    """This is the class for State
-    Attributes:
-        __tablename__: name of MySQL table
-        name: input name
-    """
+    """ State class """
     __tablename__ = 'states'
-    name = Column(String(128), nullable=False)
 
-    if environ['HBNB_TYPE_STORAGE'] == 'db':
-        cities = relationship('City', cascade='all, delete', backref='state')
-    else:
+    name = Column(String(128), nullable=False)
+    cities = relationship("City", backref="state",
+                          cascade="all, delete")
+    # @property
+    # def cities(self):
+    #     """Getter attribute cities that
+    # returns the list of City instances"""
+    #     city_list = []
+    #     all_cities = models.storage.all(City)
+    #     for city in all_cities.values():
+    #         if city.state_id == self.id:
+    #             city_list.append(city)
+    #     return city_list
+
+    if getenv('HBNB_TYPE_STORAGE') != 'db':
         @property
         def cities(self):
-            """Getter method for cities
-            Return: list of cities with state_id equal to self.id
-            """
+            """Returns the list of City instances with
+            state_id equals to the current State.id"""
             from models import storage
-            from models.city import City
-            # return list of City objs in __objects
-            cities_dict = storage.all(City)
-            cities_list = []
+            all_cities = storage.all(City)
+            return [city for city in all_cities.values()
+                    if city.state_id == self.id]
 
-            # copy values from dict to list
-            for city in cities_dict.values():
-                if city.state_id == self.id:
-                    cities_list.append(city)
-
-            return cities_list
+        def close(self):
+            """Close session"""
+            Session.close()
