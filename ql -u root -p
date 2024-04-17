@@ -1,0 +1,12 @@
+[0;1;32m●[0m mysql.service - MySQL Community Server
+     Loaded: loaded (/lib/systemd/system/mysql.service; enabled; vendor preset: enabled)
+     Active: [0;1;32mactive (running)[0m since Tue 2024-04-16 15:48:09 AST; 52s ago
+   Main PID: 12876 (mysqld)
+     Status: "Server is operational"
+      Tasks: 38 (limit: 9163)
+     Memory: 365.0M
+     CGroup: /system.slice/mysql.service
+             └─12876 /usr/sbin/mysqld
+
+abr 16 15:48:08 yeneishla-ThinkBook-15-G2-ITL systemd[1]: Starting MySQL Community Server...
+abr 16 15:48:09 yeneishla-ThinkBook-15-G2-ITL systemd[1]: Started MySQL Community Server.
